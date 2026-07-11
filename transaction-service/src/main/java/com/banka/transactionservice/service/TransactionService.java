@@ -5,14 +5,21 @@ import jakarta.jws.WebParam;
 import jakarta.jws.WebResult;
 import jakarta.jws.WebService;
 
-@WebService(targetNamespace = "http://banka.com/transactionservice")
+import java.util.List;
+
+@WebService
 public interface TransactionService {
 
-    @WebMethod(operationName = "transferMoney")
-    @WebResult(name = "transferResult")
+    @WebMethod
     TransferResult transferMoney(
             @WebParam(name = "fromAccount") String fromAccount,
             @WebParam(name = "toAccount") String toAccount,
             @WebParam(name = "amount") double amount
+    );
+
+    @WebMethod
+    @WebResult(name = "transactionHistory")
+    List<TransactionHistoryItem> getTransactionHistory(
+            @WebParam(name = "accountNumber") String accountNumber
     );
 }

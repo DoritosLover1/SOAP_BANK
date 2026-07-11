@@ -1,16 +1,17 @@
 package com.banka.accountservice.endpoint;
 
+import com.banka.accountservice.entity.AccountEntity;
 import com.banka.accountservice.exception.AccountNotFoundException;
 import com.banka.accountservice.generated.*;
+import com.banka.accountservice.repository.AccountRepository;
+import com.banka.accountservice.service.AccountCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.ws.server.endpoint.annotation.Endpoint;
 import org.springframework.ws.server.endpoint.annotation.PayloadRoot;
 import org.springframework.ws.server.endpoint.annotation.RequestPayload;
 import org.springframework.ws.server.endpoint.annotation.ResponsePayload;
 
-import javax.wsdl.OperationType;
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Endpoint
@@ -18,41 +19,27 @@ public class AccountEndpoint {
 
     private static final String NAMESPACE_URI = "http://banka.com/accountservice";
 
-    // Hafızada tutulan basit hesap kaydı - kendi tanımladığımız iç sınıf
-    private static class Account {
-        String ownerName;
-        BigDecimal balance;
-        CurrencyType currency;
+    private final AccountRepository accountRepository;
+    private final AccountCacheService accountCacheService;
 
-        Account(String ownerName, BigDecimal balance, CurrencyType currency) {
-            this.ownerName = ownerName;
-            this.balance = balance;
-            this.currency = currency;
-        }
+    @Autowired
+    public AccountEndpoint(AccountRepository accountRepository, AccountCacheService accountCacheService) {
+        this.accountRepository = accountRepository;
+        this.accountCacheService = accountCacheService;
     }
-
-    // Hesap numarası -> Account eşlemesi tutan "veritabanı"
-    private final Map<String, Account> accounts = new HashMap<>();
-
-    // Endpoint metodları birazdan buraya gelecek
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "getAccountDetailsRequest")
     @ResponsePayload
     public GetAccountDetailsResponse getAccountDetails(@RequestPayload GetAccountDetailsRequest request) {
-           Account account = accounts.get(request.getAccountNumber());
+        AccountEntity account = accountCacheService.findAccountCached(request.getAccountNumber());
 
-           GetAccountDetailsResponse response = new GetAccountDetailsResponse();
+        GetAccountDetailsResponse response = new GetAccountDetailsResponse();
+        response.setAccountNumber(account.getAccountNumber());
+        response.setOwnerName(account.getOwnerName());
+        response.setBalance(account.getBalance());
+        response.setCurrency(CurrencyType.valueOf(account.getCurrency().name()));
 
-           if (account == null) {
-               throw new AccountNotFoundException(request.getAccountNumber());
-           }
-
-           response.setAccountNumber(request.getAccountNumber());
-           response.setOwnerName(account.ownerName);
-           response.setBalance(account.balance);
-           response.setCurrency(account.currency);
-
-           return response;
+        return response;
     }
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "createAccountRequest")
@@ -60,13 +47,14 @@ public class AccountEndpoint {
     public CreateAccountResponse createAccount(@RequestPayload CreateAccountRequest request) {
         String newAccountNumber = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        Account newAccount = new Account(
+        AccountEntity newAccount = new AccountEntity(
+                newAccountNumber,
                 request.getOwnerName(),
                 request.getInitialBalance(),
-                request.getCurrency()
+                AccountEntity.Currency.valueOf(request.getCurrency().value())
         );
 
-        accounts.put(newAccountNumber, newAccount);
+        accountRepository.save(newAccount);
 
         CreateAccountResponse response = new CreateAccountResponse();
         response.setAccountNumber(newAccountNumber);
@@ -77,22 +65,22 @@ public class AccountEndpoint {
 
     @PayloadRoot(namespace = NAMESPACE_URI, localPart = "updateBalanceRequest")
     @ResponsePayload
+    @CacheEvict(value = "accounts", key = "#request.accountNumber")
     public UpdateBalanceResponse updateBalance(@RequestPayload UpdateBalanceRequest request) {
-        Account account = accounts.get(request.getAccountNumber());
-
-        if (account == null) {
-            throw new AccountNotFoundException(request.getAccountNumber());
-        }
+        AccountEntity account = accountRepository.findById(request.getAccountNumber())
+                .orElseThrow(() -> new AccountNotFoundException(request.getAccountNumber()));
 
         if (request.getOperationType() == com.banka.accountservice.generated.OperationType.DEBIT) {
-            account.balance = account.balance.subtract(request.getAmount());
+            account.setBalance(account.getBalance().subtract(request.getAmount()));
         } else {
-            account.balance = account.balance.add(request.getAmount());
+            account.setBalance(account.getBalance().add(request.getAmount()));
         }
 
+        accountRepository.save(account);
+
         UpdateBalanceResponse response = new UpdateBalanceResponse();
-        response.setAccountNumber(request.getAccountNumber());
-        response.setNewBalance(account.balance);
+        response.setAccountNumber(account.getAccountNumber());
+        response.setNewBalance(account.getBalance());
         response.setStatus("SUCCESS");
 
         return response;

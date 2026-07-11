@@ -2,6 +2,7 @@ import { useState } from 'react';
 import CreateAccount from './components/CreateAccount';
 import ViewAccount from './components/ViewAccount';
 import TransferMoney from './components/TransferMoney';
+import TransactionHistory from './components/TransactionHistory';
 import './App.css';
 
 function App() {
@@ -34,12 +35,19 @@ function App() {
         >
           Transfer
         </button>
+        <button
+          className={activeTab === 'history' ? 'active' : ''}
+          onClick={() => setActiveTab('history')}
+        >
+          Geçmiş
+        </button>
       </div>
 
       <div className="tab-content">
         {activeTab === 'create' && <CreateAccount />}
         {activeTab === 'view' && <ViewAccount />}
         {activeTab === 'transfer' && <TransferMoney />}
+        {activeTab === 'history' && <TransactionHistory />}
       </div>
     </div>
   );

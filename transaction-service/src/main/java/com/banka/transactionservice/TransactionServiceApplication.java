@@ -15,10 +15,10 @@ public class TransactionServiceApplication {
     }
 
     @Bean
-    public CommandLineRunner publishSoapEndpoint() {
+    public CommandLineRunner publishSoapEndpoint(TransactionServiceImpl transactionServiceImpl) {
         return args -> {
-            String address = "http://localhost:8082/ws/transactions";
-            Endpoint.publish(address, new TransactionServiceImpl());
+            String address = "http://localhost:8084/ws/transactions";
+            Endpoint.publish(address, transactionServiceImpl);
             System.out.println("Transaction SOAP servisi yayinda: " + address);
         };
     }

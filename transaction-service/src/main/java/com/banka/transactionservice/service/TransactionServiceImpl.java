@@ -5,64 +5,77 @@ import com.banka.transactionservice.client.account.AccountServicePortService;
 import com.banka.transactionservice.client.account.GetAccountDetailsRequest;
 import com.banka.transactionservice.client.account.GetAccountDetailsResponse;
 import com.banka.transactionservice.client.account.UpdateBalanceRequest;
+import com.banka.transactionservice.entity.TransactionRecord;
+import com.banka.transactionservice.repository.TransactionRepository;
 
 import jakarta.jws.WebService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
+@Component
 @WebService(
         endpointInterface = "com.banka.transactionservice.service.TransactionService",
         targetNamespace = "http://banka.com/transactionservice"
 )
 public class TransactionServiceImpl implements TransactionService {
 
+    private final TransactionRepository transactionRepository;
+
+    @Autowired
+    public TransactionServiceImpl(TransactionRepository transactionRepository) {
+        this.transactionRepository = transactionRepository;
+    }
+
     @Override
     public TransferResult transferMoney(String fromAccount, String toAccount, double amount) {
 
         if (amount <= 0) {
-            return new TransferResult("FAILED", null, "Transfer tutari sifirdan buyuk olmalidir");
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
+                    "Transfer tutari sifirdan buyuk olmalidir");
         }
 
         AccountServicePortService service = new AccountServicePortService();
         AccountServicePort accountPort = service.getAccountServicePortSoap11();
 
-        // 1. Gonderen hesabi sorgula
         GetAccountDetailsResponse fromAccountDetails;
         try {
             GetAccountDetailsRequest request = new GetAccountDetailsRequest();
             request.setAccountNumber(fromAccount);
             fromAccountDetails = accountPort.getAccountDetails(request);
         } catch (Exception e) {
-            return new TransferResult("FAILED", null, "We cannot find sender account: " + fromAccount);
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
+                    "We cannot find sender account: " + fromAccount);
         }
 
-        // 2. Alici hesabi sorgula
         GetAccountDetailsResponse toAccountDetails;
         try {
             GetAccountDetailsRequest toRequest = new GetAccountDetailsRequest();
             toRequest.setAccountNumber(toAccount);
             toAccountDetails = accountPort.getAccountDetails(toRequest);
         } catch (Exception e) {
-            return new TransferResult("FAILED", null, "We cannot find receiver account: " + toAccount);
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
+                    "We cannot find receiver account: " + toAccount);
         }
 
-        // 3. Para birimi kontrolu - iki hesap da ayni para biriminde olmali
         if (fromAccountDetails.getCurrency() != toAccountDetails.getCurrency()) {
-            return new TransferResult("FAILED", null,
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
                     "Currency mismatch: sender uses " + fromAccountDetails.getCurrency()
                             + ", receiver uses " + toAccountDetails.getCurrency());
         }
 
-        // 4. Bakiye yeterli mi kontrol et
         BigDecimal currentBalance = fromAccountDetails.getBalance();
         BigDecimal transferAmount = BigDecimal.valueOf(amount);
 
         if (currentBalance.compareTo(transferAmount) < 0) {
-            return new TransferResult("FAILED", null,
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
                     "Current balance is not sufficient for this transaction: " + currentBalance + " " + fromAccountDetails.getCurrency());
         }
 
-        // 5. Gonderenden dus (DEBIT)
         try {
             UpdateBalanceRequest debitRequest = new UpdateBalanceRequest();
             debitRequest.setAccountNumber(fromAccount);
@@ -70,10 +83,10 @@ public class TransactionServiceImpl implements TransactionService {
             debitRequest.setOperationType(com.banka.transactionservice.client.account.OperationType.DEBIT);
             accountPort.updateBalance(debitRequest);
         } catch (Exception e) {
-            return new TransferResult("FAILED", null, "Failed to debit sender account: " + e.getMessage());
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
+                    "Failed to debit sender account: " + e.getMessage());
         }
 
-        // 6. Aliciya ekle (CREDIT)
         try {
             UpdateBalanceRequest creditRequest = new UpdateBalanceRequest();
             creditRequest.setAccountNumber(toAccount);
@@ -81,16 +94,45 @@ public class TransactionServiceImpl implements TransactionService {
             creditRequest.setOperationType(com.banka.transactionservice.client.account.OperationType.CREDIT);
             accountPort.updateBalance(creditRequest);
         } catch (Exception e) {
-            // KRITIK DURUM: gonderenden dusuldu ama aliciya eklenemedi
-            // Gercek bir bankada burada "compensating transaction" (telafi islemi) gerekir
-            return new TransferResult("FAILED", null,
+            return saveAndReturn("FAILED", null, fromAccount, toAccount, amount,
                     "Critical: debited sender but failed to credit receiver. Manual intervention needed: " + e.getMessage());
         }
 
         String transactionId = "TXN-" + System.currentTimeMillis();
-        System.out.println("Transfer tamamlandi: " + fromAccount + " -> " + toAccount
-                + " tutar: " + transferAmount + " " + fromAccountDetails.getCurrency());
+        return saveAndReturn("SUCCESS", transactionId, fromAccount, toAccount, amount,
+                "Transfer basariyla tamamlandi");
+    }
 
-        return new TransferResult("SUCCESS", transactionId, "Transfer basariyla tamamlandi");
+    @Override
+    public List<TransactionHistoryItem> getTransactionHistory(String accountNumber) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        List<TransactionRecord> records = transactionRepository
+                .findByFromAccountOrToAccountOrderByCreatedAtDesc(accountNumber, accountNumber);
+
+        return records.stream()
+                .map(r -> new TransactionHistoryItem(
+                        r.getTransactionId() != null ? r.getTransactionId() : "N/A",
+                        r.getFromAccount(),
+                        r.getToAccount(),
+                        r.getAmount(),
+                        r.getStatus(),
+                        r.getMessage(),
+                        r.getCreatedAt().format(formatter)
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private TransferResult saveAndReturn(String status, String transactionId,
+                                          String fromAccount, String toAccount,
+                                          double amount, String message) {
+        String id = transactionId != null ? transactionId : "TXN-" + System.currentTimeMillis() + "-FAILED";
+
+        TransactionRecord record = new TransactionRecord(
+                id, fromAccount, toAccount, BigDecimal.valueOf(amount), status, message
+        );
+        transactionRepository.save(record);
+
+        return new TransferResult(status, transactionId, message);
     }
 }

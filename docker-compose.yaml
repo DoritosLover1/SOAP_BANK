@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: banka-postgres
+    environment:
+      POSTGRES_DB: bankadb
+      POSTGRES_USER: banka
+      POSTGRES_PASSWORD: banka123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: banka-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
