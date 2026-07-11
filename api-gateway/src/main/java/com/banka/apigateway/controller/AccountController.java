@@ -1,0 +1,61 @@
+package com.banka.apigateway.controller;
+
+import com.banka.apigateway.client.account.*;
+import com.banka.apigateway.dto.AccountResponse;
+import com.banka.apigateway.dto.CreateAccountRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("api/accounts")
+public class AccountController {
+
+    private AccountServicePort getAccountPort() {
+        AccountServicePortService service = new AccountServicePortService();
+        return service.getAccountServicePortSoap11();
+    }
+
+    @GetMapping("/{accountNumber}")
+    public ResponseEntity<?> getAccount(@PathVariable String accountNumber) {
+        try {
+            GetAccountDetailsRequest request = new GetAccountDetailsRequest();
+            request.setAccountNumber(accountNumber);
+
+            GetAccountDetailsResponse soapResponse = getAccountPort().getAccountDetails(request);
+
+            AccountResponse response = new AccountResponse(
+                    soapResponse.getAccountNumber(),
+                    soapResponse.getBalance(),
+                    soapResponse.getCurrency().value()
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Account was not found: " + accountNumber);
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createAccount(@RequestBody CreateAccountRequest request) {
+        try {
+            com.banka.apigateway.client.account.CreateAccountRequest soapRequest =
+                    new com.banka.apigateway.client.account.CreateAccountRequest();
+
+            soapRequest.setOwnerName(request.getOwnerName());
+            soapRequest.setInitialBalance(request.getInitialBalance());
+            soapRequest.setCurrency(CurrencyType.valueOf(request.getCurrency()));
+
+            CreateAccountResponse soapResponse = getAccountPort().createAccount(soapRequest);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(soapResponse.getAccountNumber());
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Gecersiz para birimi: " + request.getCurrency());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Hesap olusturulamadi: " + e.getMessage());
+        }
+    }
+}

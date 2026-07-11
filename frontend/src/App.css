@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #0e1420;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 39px,
+      rgba(169, 129, 46, 0.05) 40px
+    );
+  color: #f6f1e5;
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 48px 20px 60px;
+}
+
+/* --- Masthead --- */
+.masthead {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.masthead .eyebrow {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a9812e;
+  margin-bottom: 10px;
+}
+
+.masthead h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 32px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.masthead .subtitle {
+  font-size: 13px;
+  color: #8a92a6;
+  margin-top: 6px;
+}
+
+/* --- Ledger tabs --- */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(246, 241, 229, 0.15);
+  margin-bottom: 0;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 12px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8a92a6;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tabs button:hover {
+  color: #f6f1e5;
+}
+
+.tabs button.active {
+  color: #a9812e;
+  border-bottom-color: #a9812e;
+}
+
+/* --- Paper card --- */
+.tab-content {
+  background: #f6f1e5;
+  color: #1b1610;
+  border-radius: 2px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.tab-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to right, #a9812e, #c9a856 50%, #a9812e);
+}
+
+.form-card h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 20px;
+  margin: 0 0 20px;
+  color: #1b1610;
+}
+
+.form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-card label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6b6252;
+  gap: 6px;
+}
+
+.form-card input,
+.form-card select {
+  padding: 10px 0;
+  border: none;
+  border-bottom: 1.5px solid #c9bfa8;
+  background: transparent;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px;
+  color: #1b1610;
+  border-radius: 0;
+  transition: border-color 0.15s ease;
+}
+
+.form-card input:focus,
+.form-card select:focus {
+  outline: none;
+  border-bottom-color: #a9812e;
+}
+
+.form-card button[type='submit'] {
+  margin-top: 8px;
+  padding: 12px;
+  background: #1b1610;
+  color: #f6f1e5;
+  border: none;
+  border-radius: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.form-card button[type='submit']:hover:not(:disabled) {
+  background: #a9812e;
+}
+
+.form-card button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Results --- */
+.result {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 2px;
+  font-size: 14px;
+  border-left: 3px solid;
+}
+
+.result.success {
+  background: rgba(63, 107, 79, 0.08);
+  border-left-color: #3f6b4f;
+  color: #2c4d38;
+}
+
+.result.error {
+  background: rgba(156, 59, 59, 0.08);
+  border-left-color: #9c3b3b;
+  color: #7a2e2e;
+}
+
+.result strong,
+.result .mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* --- Stamp (transfer result signature element) --- */
+.stamp {
+  margin-top: 20px;
+  padding: 20px;
+  text-align: center;
+  border: 2px solid;
+  border-radius: 4px;
+  transform: rotate(-1.2deg);
+}
+
+.stamp.success {
+  border-color: #3f6b4f;
+  color: #3f6b4f;
+}
+
+.stamp.failed {
+  border-color: #9c3b3b;
+  color: #9c3b3b;
+}
+
+.stamp .stamp-status {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stamp .stamp-detail {
+  margin-top: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #1b1610;
+  opacity: 0.75;
+}
+
+/* --- Balance display (ViewAccount signature) --- */
+.balance-display {
+  margin-top: 20px;
+  padding: 20px 0 4px;
+  border-top: 1px dashed #c9bfa8;
+}
+
+.balance-display .balance-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b6252;
+}
+
+.balance-display .balance-amount {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 36px;
+  margin: 4px 0 2px;
+}
+
+.balance-display .balance-account {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #6b6252;
+}

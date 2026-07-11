@@ -1,0 +1,29 @@
+# Maven
+target/
+*.class
+
+src/generated/
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE dosyalari
+.idea/
+*.iml
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log dosyalari
+*.log
+build_log.txt
+
+.env
