@@ -9,10 +9,14 @@ import com.banka.transactionservice.entity.TransactionRecord;
 import com.banka.transactionservice.repository.TransactionRepository;
 
 import jakarta.jws.WebService;
+import jakarta.xml.ws.BindingProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,9 +30,29 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
 
+    @Value("${account.service.wsdl-url:http://localhost:8081/ws/accounts.wsdl}")
+    private String accountServiceWsdlUrl;
+
+    @Value("${account.service.endpoint-url:http://localhost:8081/ws/accounts}")
+    private String accountServiceEndpointUrl;
+
     @Autowired
     public TransactionServiceImpl(TransactionRepository transactionRepository) {
         this.transactionRepository = transactionRepository;
+    }
+
+    private AccountServicePort getAccountPort() {
+        Thread.currentThread().setContextClassLoader(AccountServicePortService.class.getClassLoader());
+
+        try {
+            AccountServicePortService service = new AccountServicePortService(new URL(accountServiceWsdlUrl));
+            AccountServicePort port = service.getAccountServicePortSoap11();
+            ((BindingProvider) port).getRequestContext()
+                    .put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, accountServiceEndpointUrl);
+            return port;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("account-service WSDL adresi geçersiz: " + accountServiceWsdlUrl, e);
+        }
     }
 
     @Override
@@ -39,8 +63,7 @@ public class TransactionServiceImpl implements TransactionService {
                     "Transfer tutari sifirdan buyuk olmalidir");
         }
 
-        AccountServicePortService service = new AccountServicePortService();
-        AccountServicePort accountPort = service.getAccountServicePortSoap11();
+        AccountServicePort accountPort = getAccountPort();
 
         GetAccountDetailsResponse fromAccountDetails;
         try {

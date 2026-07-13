@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-service
+  namespace: soap-bank
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-service
+  template:
+    metadata:
+      labels:
+        app: transaction-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8082"
+    spec:
+      containers:
+        - name: transaction-service
+          image: soap-bank/transaction-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: ACCOUNT_SERVICE_WSDL_URL
+              value: "http://account-service:8081/ws/accounts.wsdl"
+            - name: ACCOUNT_SERVICE_ENDPOINT_URL
+              value: "http://account-service:8081/ws/accounts"
+            # transaction-service'in KENDİ SOAP endpoint'ini yayınladığı adres.
+            # host kısmı "localhost" olursa embedded JAX-WS sunucusu sadece loopback'e bind olur
+            # ve pod dışından (api-gateway'den) erişilemez olur. 0.0.0.0 tüm arayüzlere bind eder.
+            - name: TRANSACTION_SERVICE_PUBLISH_URL
+              value: "http://0.0.0.0:8084/ws/transactions"
+            # application.yaml'daki localhost:5433 yerine cluster içi postgres servisi kullanılır
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/bankadb"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-service
+  namespace: soap-bank
+spec:
+  selector:
+    app: transaction-service
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+    - name: soap-internal
+      port: 8084
+      targetPort: 8084

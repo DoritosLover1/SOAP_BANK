@@ -1,0 +1,33 @@
+# Bu dosya sadece kube-prometheus-stack (Helm) kurulduktan SONRA uygulanmalı,
+# çünkü ServiceMonitor CRD'si (Custom Resource Definition) o kurulumla birlikte gelir.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: account-service-monitor
+  namespace: soap-bank
+  labels:
+    release: monitoring   # kube-prometheus-stack'in helm release adıyla eşleşmeli (SETUP.md'ye bak)
+spec:
+  selector:
+    matchLabels:
+      app: account-service
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: transaction-service-monitor
+  namespace: soap-bank
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: transaction-service
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s

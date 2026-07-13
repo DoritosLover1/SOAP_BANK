@@ -4,10 +4,14 @@ import com.banka.apigateway.client.transaction.*;
 import com.banka.apigateway.dto.TransactionHistoryResponse;
 import com.banka.apigateway.dto.TransferRequest;
 import com.banka.apigateway.dto.TransferResponse;
+import jakarta.xml.ws.BindingProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,9 +19,22 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/transfer")
 public class TransferController {
 
+    @Value("${transaction.service.wsdl-url:http://localhost:8084/ws/transactions?wsdl}")
+    private String wsdlUrl;
+
+    @Value("${transaction.service.endpoint-url:http://localhost:8084/ws/transactions}")
+    private String endpointUrl;
+
     private TransactionService getTransactionPort() {
-        TransactionServiceImplService service = new TransactionServiceImplService();
-        return service.getTransactionServiceImplPort();
+        try {
+            TransactionServiceImplService service = new TransactionServiceImplService(new URL(wsdlUrl));
+            TransactionService port = service.getTransactionServiceImplPort();
+            ((BindingProvider) port).getRequestContext()
+                    .put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointUrl);
+            return port;
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("transaction-service WSDL adresi geçersiz: " + wsdlUrl, e);
+        }
     }
 
     @PostMapping

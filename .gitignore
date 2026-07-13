@@ -27,4 +27,14 @@ Thumbs.db
 *.log
 build_log.txt
 
+# Docker image exportlari (docker save ile uretilen, cok buyuk dosyalar)
+*.tar
+*.tar.gz
+*.zip
+
+# Kubernetes - hassas olabilecek dosyalar
+k8s/*-secret.yaml
+*.kubeconfig
+kubeconfig
+
 .env
