@@ -81,3 +81,7 @@ npm run dev
 ## .gitignore Notu
 
 `src/generated/`, `target/`, `.env`, `node_modules/` gibi otomatik üretilen/hassas dosyalar repoya dahil edilmez. Yeni bir ortamda projeyi çalıştırırken `src/generated/java` otomatik olarak `wsimport` tarafından yeniden oluşturulur.
+
+
+## EKLEMELER
+Bu proje kubernetes üstüne kurulmuştur. Buradaki işlemleri yaparsanız sadece docker lokalde "docker" olmadan çalışacaktır. Eğer docker ve kubernetes kullanmak isterseniz. İçeride olan dokümanları kullanarak yapabilirsiniz. Genel işlemi ve oluşturulması zaten aynı diğer docker ve kubernetes işlemleri gibi. Eğer bir eksik ile karşılaşırsanız sistem zaten size "cmd" ya da "bash" üzerinde size geri bildirim gelecektir. Bu hatalar genel olarak sabit ve genel hatalar olduğu için doğrudan cevaplarını bulabilirsiniz. Ayrıca bu proje tamamen lokal üzerinedir. Kendi github'ınıza atmak isterseniz çekinmeyin ama .gitignore'u kontrol etmeyi ve gerekli ENGELLEMELERİ yapmayı unutmayın. BAZI DOSYALAR KİŞİSEL OLABİLİR YA DA GEREKSİZ OLABİLİR. KENDİNİZİN DENETLEMESİ ÇOK ÖNEMLİDİR. .ENV BENZERİ GİZLİ BİLGİ İÇEREN DOSYALARI YA DA IP BİLGİSİ YA DA DAHA ÖNEMLİ BİLGİLERİ İÇEREN ŞEYLERİ **.gitignore**'A EKLEMEYİ UNUTMAYIN
